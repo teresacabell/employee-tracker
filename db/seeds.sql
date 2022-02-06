@@ -1,4 +1,4 @@
-INSERT INTO department(name)
+INSERT INTO department(dept_name)
 VALUES 
 ('Management'),
 ('Office Management'),
@@ -9,7 +9,7 @@ VALUES
 ('Relations'),
 ('Warehouse');
 
-INSERT INTO role(title, salary, department_id)
+INSERT INTO empRole(title, salary, department_id)
 VALUES
 ('Regional Manager', 95000, 1),
 ('Receptionist', 40000, 2),
