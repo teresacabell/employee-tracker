@@ -2,6 +2,8 @@ const inquirer = require("inquirer");
 const mysql = require("mysql2");
 const conTable = require("console.table");
 
+const addEmpQ = ['What is the new first name?', 'What is the new last name?', 'What role?', 'Who is their manager?']
+
 // create connection
 const connection = mysql.createConnection({
   host: "localhost",
@@ -26,46 +28,28 @@ function promptMenu() {
       name: "actionChoice",
       message: "What would you like to do today?",
       choices: [
+        "View all departments",
+        "View all roles",
         "View all employees",
-        "View employees by role",
-        "View employees by department",
-        "View employees by manager",
         "Add employee",
         "Add role",
         "Add department",
         "Update role",
-        "Update manager",
-        "Delete employee",
-        "Delete role",
-        "Delete department",
-        "View department budgets",
       ],
     })
 
     .then((answer) => {
       switch (answer.actionChoice) {
         case "View all departments":
-            viewAllDept();
-            break;
-        
+          viewAllDept();
+          break;
+
         case "View all roles":
-            viewAllRoles();
-            break;
-        
+          viewAllRoles();
+          break;
+
         case "View all employees":
           viewAllEmp();
-          break;
-
-        case "View employees by role":
-          viewEmpByRole();
-          break;
-
-        case "View employees by department":
-          viewEmpByDept();
-          break;
-
-        case "View employees by manager":
-          viewEmpByMan();
           break;
 
         case "Add employee":
@@ -83,40 +67,38 @@ function promptMenu() {
         case "Update role":
           updateRole();
           break;
-
-        case "Update manager":
-          updateMan();
-          break;
-
-        case "Delete employee":
-          deleteEmp();
-          break;
-
-        case "Delete role":
-          deleteRole();
-          break;
-
-        case "Delete department":
-          deleteDept();
-          break;
-
-        case "View department budgets":
-          viewDeptBud();
-          break;
       }
     });
 }
 
 // View all departments
 function viewAllDept() {
-    console.log('All departments:');
+  console.log("All departments:");
 
-    
+  const sql =
+    "SELECT department.dept_name AS Name, department.id AS ID FROM department";
+
+  connection
+    .promise()
+    .query(sql)
+    .then(([rows]) => {
+      console.table(rows);
+    });
 }
 
-// View all roles 
+// View all roles
 function viewAllRoles() {
+  console.log("All roles:");
 
+  const sql =
+    "SELECT empRole.title AS Title, empRole.id as ID, department.dept_name AS Department FROM empRole LEFT JOIN department on empRole.department_id = department.id";
+
+  connection
+    .promise()
+    .query(sql)
+    .then(([rows]) => {
+      console.table(rows);
+    });
 }
 
 // View all employees
@@ -134,30 +116,31 @@ function viewAllEmp() {
     });
 }
 
-// View employees by role 
-function viewEmpByRole() {
-
-}
-
-// View employee by department
-function viewEmpByDept() {
-
-}
-
-// View employee by Manager 
-function viewEmpByMan() {
-
-}
-
 // Add employee
 function addEmp() {
-
+  inquirer
+    .prompt([
+      {
+        type: 'input',
+        name: 'employeeFirst',
+        message: addEmpQ[0]
+      },
+      {
+        type: 'input',
+        name: 'employeeLast',
+        message: addEmpQ[1],
+      },
+      {
+          type: 'list',
+          name: 'role',
+          message: addEmpQ[2]
+      }
+    ])
+   
 }
 
-// Add role
-function addRole() {
-
-}
+// Add another role
+function addRole() {}
 
 // Add another department
 function addDept() {
@@ -186,31 +169,8 @@ function addDept() {
 }
 
 // Update role
-function updateRole() {
+function updateRole() {}
 
-}
 
-// Update manager
-function updateMan() {
 
-}
 
-// Delete employee
-function deleteEmp() {
-
-}
-
-// Delete role 
-function deleteRole() {
-
-}
-
-// Delete department
-function deleteDept() {
-
-}
-
-// View department budgets
-function viewDeptBud() {
-
-}
