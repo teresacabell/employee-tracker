@@ -8,9 +8,9 @@ const addEmpQ = [
   "What role?",
   "Who is their manager?",
 ];
-const roleQuery =
-  'SELECT * from empRole';
-const manQuery =  'SELECT CONCAT(employee.first_name, " ", employee.last_name) AS full_name FROM employee';
+const roleQuery = "SELECT * from empRole";
+const manQuery =
+  'SELECT CONCAT(employee.first_name, " ", employee.last_name) AS full_name FROM employee';
 
 // create connection
 const connection = mysql.createConnection({
@@ -106,6 +106,7 @@ function viewAllRoles() {
     .query(sql)
     .then(([rows]) => {
       console.table(rows);
+      promptMenu();
     });
 }
 
@@ -125,64 +126,61 @@ function viewAllEmp() {
 }
 
 // Add employee
-function addEmp() {
-  connection.query(roleQuery, (err, results) => {
-    console.log(results); 
+async function addEmp() {
+  const [rows] = await connection.promise().query("SELECT * FROM employee");
+  let choiceArr = rows.map(({ id, first_name, last_name }) => ({
+    name: first_name + " " + last_name,
+    value: id,
+  }));
+  console.log(choiceArr);
 
-    if (err) throw err;
+  const [row] = await connection.promise().query("SELECT * FROM empRole");
+  let roleArr = row.map(({ id, title }) => ({
+    name: title,
+    value: id,
+  }));
+  console.log(roleArr);
 
-    let choiceArr = results.map(({ id, title }) => ({
-            name: title,
-            value: id
-          }));
-
-    inquirer
-      .prompt([
-        {
-          type: "input",
-          name: "employeeFirst",
-          message: addEmpQ[0],
-        },
-        {
-          type: "input",
-          name: "employeeLast",
-          message: addEmpQ[1],
-        },
-        {
-          type: "list",
-          name: "role",
-          choices: choiceArr,
-          message: addEmpQ[2],
-        },
-        {
-          type: "list",
-          name: "manager",
-          choices: function () {
-            connection.query(manQuery, (err, results) => {
-            let choiceArr = results.map((choice) => choice.full_name);
-            console.log(choiceArr);
-            return choiceArr;
-            })
-          },
-          message: addEmpQ[3],
-        }
-      ])
-      
-      .then((answer) => {
-          console.log(answer);
-        // connection.query(
-        //   `INSERT INTO employee(first_name, last_name, role_id, manager_id) VALUES(?, ?, (SELECT id FROM empRole WHERE title = ?), 
-        //     (SELECT id FROM (SELECT id FROM employee WHERE CONCAT(first_name, " ", last_name)= ?) AS tmptable))`,
-        //   [
-        //     answer.employeeFirst,
-        //     answer.employeeLast,
-        //     answer.role,
-        //     answer.manager,
-        //   ]
-        // );
-        promptMenu();
-      });
-  });
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "employeeFirst",
+        message: addEmpQ[0],
+      },
+      {
+        type: "input",
+        name: "employeeLast",
+        message: addEmpQ[1],
+      },
+      {
+        type: "list",
+        name: "role",
+        choices: roleArr,
+        message: addEmpQ[2],
+      },
+      {
+        type: "list",
+        name: "manager",
+        choices: choiceArr,
+        message: addEmpQ[3],
+      },
+    ])
+    .then((answer) => {
+      const empObj = {
+        first_name: answer.employeeFirst,
+        last_name: answer.employeeLast,
+        role_id: answer.role,
+        manager_id: answer.manager,
+      };
+      connection
+        .promise()
+        .query("INSERT INTO employee SET ?", empObj)
+        .then(() => {
+          console.log("Employee added to database!");
+          promptMenu();
+        });
+    });
 }
 
 // Add another role
@@ -238,42 +236,36 @@ function addDept() {
 }
 
 // Update role
-function updateRole() {
-  const query = `SELECT CONCAT (first_name, " ", last_name) AS full_name FROM employee; SELECT title FROM empRole`;
-  connection.query(query, (err, results) => {
-    if (err) throw err;
+async function updateRole() {
+    const [empList] = await connection.promise().query('SELECT * FROM employee')
+    
+    const [row] = await connection.promise().query("SELECT * FROM empRole");
+    let roleArr = row.map(({ id, title }) => ({
+      name: title,
+      value: id,
+    }));
+    console.log(roleArr);
 
-    inquirer
-      .prompt([
-        {
-          type: "list",
-          name: "employ",
-          choices: function () {
-            let choiceArr = results[0].map((choice) => choice.full_name);
-            return choiceArr;
-          },
-          message: "Which employee would you like to update?",
-        },
-        {
-          type: "list",
-          name: "roleNew",
-          choices: function () {
-            let choiceArr = results[1].map((choice) => choice.title);
-            return choiceArr;
-          },
-        },
-      ])
-      .then((answer) => {
-        connection.query(
-          `UPDATE employee 
-        SET role_id = (SELECT id FROM empRole WHERE title = ?)
-        WHERE id = (SELECT id FROM(SELECT id FROM employee WHERE CONCAT(first_name, " ", last_name) = ?) AS tmptable)`,
-          [answer.roleNew, answer.employ],
-          (err, results) => {
-            if (err) throw err;
-            promptMenu();
-          }
-        );
-      });
-  });
-}
+    let empArr = empList.map(({ id, first_name, last_name }) => ({
+        name: first_name + " " + last_name,
+        value: id,
+      }));
+      console.log(empArr);
+
+      inquirer.prompt({
+          type: 'list',
+          name: 'updatedEmp',
+          choices: empArr,
+          message: 'Which employee would you like to update?'
+      }).then(answer => {
+           const chosenEmp = answer.updatedEmp;
+           inquirer.prompt({
+               type: 'list',
+               name: 'newRole',
+               choices: roleArr,
+               message: 'What is their new role?'
+           }).then(answers => {
+               connection.promise().query('UPDATE employee SET role_id = ? WHERE id = ?', [answers.newRole, chosenEmp]).then(response => console.log(response))
+               console.info('Employee has been updated!')
+           })
+      })
