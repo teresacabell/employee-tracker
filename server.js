@@ -163,7 +163,29 @@ function addEmp() {
 }
 
 // Add another role
-function addRole() {}
+function addRole() {
+    inquirer
+    .prompt({
+        type: 'input',
+        name: 'roleName',
+        message: 'What is the new role?'
+    })
+    .then((answer) => {
+        console.log(answer);
+
+        const sql = 'INSERT INTO empRole SET ?';
+        connection.promise()
+        .query(sql, { title: answer.roleName})
+        .then(([rows]) => {
+            if (rows.affectedRows === 1) {
+                console.info(
+                    `${answer.roleName} has been successfully added to the database!`
+                );
+            }
+            promptMenu();
+        });
+    });
+}
 
 // Add another department
 function addDept() {
