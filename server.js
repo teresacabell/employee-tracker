@@ -269,3 +269,4 @@ async function updateRole() {
                console.info('Employee has been updated!')
            })
       })
+}
