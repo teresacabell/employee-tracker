@@ -91,6 +91,7 @@ function viewAllDept() {
     .query(sql)
     .then(([rows]) => {
       console.table(rows);
+      promptMenu();
     });
 }
 
@@ -122,6 +123,7 @@ function viewAllEmp() {
     .query(sql)
     .then(([rows]) => {
       console.table(rows);
+      promptMenu();
     });
 }
 
@@ -267,6 +269,7 @@ async function updateRole() {
            }).then(answers => {
                connection.promise().query('UPDATE employee SET role_id = ? WHERE id = ?', [answers.newRole, chosenEmp]).then(response => console.log(response))
                console.info('Employee has been updated!')
-           })
+               promptMenu();
+           }) 
       })
 }
