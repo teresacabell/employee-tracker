@@ -2,8 +2,15 @@ const inquirer = require("inquirer");
 const mysql = require("mysql2");
 const conTable = require("console.table");
 
-const addEmpQ = ['What is the new first name?', 'What is the new last name?', 'What role?', 'Who is their manager?'];
-const roleQuery = 'SELECT * from empRole; SELECT CONCAT(employee.first_name, " ", employee.last_name) AS full_name FROM employee';
+const addEmpQ = [
+  "What is the new first name?",
+  "What is the new last name?",
+  "What role?",
+  "Who is their manager?",
+];
+const roleQuery =
+  'SELECT * from empRole';
+const manQuery =  'SELECT CONCAT(employee.first_name, " ", employee.last_name) AS full_name FROM employee';
 
 // create connection
 const connection = mysql.createConnection({
@@ -120,69 +127,86 @@ function viewAllEmp() {
 // Add employee
 function addEmp() {
   connection.query(roleQuery, (err, results) => {
-    if (err) throw err; 
+    console.log(results); 
+
+    if (err) throw err;
+
+    let choiceArr = results.map(({ id, title }) => ({
+            name: title,
+            value: id
+          }));
 
     inquirer
-    .prompt([
-      {
-        type: 'input',
-        name: 'employeeFirst',
-        message: addEmpQ[0]
-      },
-      {
-        type: 'input',
-        name: 'employeeLast',
-        message: addEmpQ[1],
-      },
-      {
-          type: 'list',
-          name: 'role',
-          choices: function() {
-              let choiceArr = results[0].map(choice => choice.title);
-              return choiceArr;
+      .prompt([
+        {
+          type: "input",
+          name: "employeeFirst",
+          message: addEmpQ[0],
+        },
+        {
+          type: "input",
+          name: "employeeLast",
+          message: addEmpQ[1],
+        },
+        {
+          type: "list",
+          name: "role",
+          choices: choiceArr,
+          message: addEmpQ[2],
+        },
+        {
+          type: "list",
+          name: "manager",
+          choices: function () {
+            connection.query(manQuery, (err, results) => {
+            let choiceArr = results.map((choice) => choice.full_name);
+            console.log(choiceArr);
+            return choiceArr;
+            })
           },
-          message: addEmpQ[2]
-      },
-      {
-          type: 'list',
-          name: 'manager',
-          choices: function() {
-              let choiceArr = results[1].map(choice => choice.full_name);
-              return choiceArr;
-          },
-          message: AddEmpQ[3]
-      }
-    ]).then((answer) => {
-        connection.query(
-            `INSERT INTO employee(first_name, last_name, role_id, manager_id) VALUES(?, ?, (SELECT id FROM empRole WHERE title = ?), 
-            (SELECT id FROM (SELECT id FROM employee WHERE CONCAT(first_name, " ", last_name)= ?) AS tmptable))`, [answer.employeeFirst, answer.employeeLast, answer.role, answer.manager]
-        ) 
+          message: addEmpQ[3],
+        }
+      ])
+      
+      .then((answer) => {
+          console.log(answer);
+        // connection.query(
+        //   `INSERT INTO employee(first_name, last_name, role_id, manager_id) VALUES(?, ?, (SELECT id FROM empRole WHERE title = ?), 
+        //     (SELECT id FROM (SELECT id FROM employee WHERE CONCAT(first_name, " ", last_name)= ?) AS tmptable))`,
+        //   [
+        //     answer.employeeFirst,
+        //     answer.employeeLast,
+        //     answer.role,
+        //     answer.manager,
+        //   ]
+        // );
         promptMenu();
-    })
-})
+      });
+  });
 }
 
 // Add another role
 function addRole() {
-    inquirer
+  inquirer
     .prompt({
-        type: 'input',
-        name: 'roleName',
-        message: 'What is the new role?'
+      type: "input",
+      name: "roleName",
+      message: "What is the new role?",
     })
     .then((answer) => {
-        console.log(answer);
+      console.log(answer);
 
-        const sql = 'INSERT INTO empRole SET ?';
-        connection.promise()
-        .query(sql, { title: answer.roleName})
+      const sql = "INSERT INTO empRole SET ?";
+      connection
+        .promise()
+        .query(sql, { title: answer.roleName })
         .then(([rows]) => {
-            if (rows.affectedRows === 1) {
-                console.info(
-                    `${answer.roleName} has been successfully added to the database!`
-                );
-            }
-            promptMenu();
+          if (rows.affectedRows === 1) {
+            console.info(
+              `${answer.roleName} has been successfully added to the database!`
+            );
+          }
+          promptMenu();
         });
     });
 }
@@ -214,8 +238,42 @@ function addDept() {
 }
 
 // Update role
-function updateRole() {}
+function updateRole() {
+  const query = `SELECT CONCAT (first_name, " ", last_name) AS full_name FROM employee; SELECT title FROM empRole`;
+  connection.query(query, (err, results) => {
+    if (err) throw err;
 
-
-
-
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "employ",
+          choices: function () {
+            let choiceArr = results[0].map((choice) => choice.full_name);
+            return choiceArr;
+          },
+          message: "Which employee would you like to update?",
+        },
+        {
+          type: "list",
+          name: "roleNew",
+          choices: function () {
+            let choiceArr = results[1].map((choice) => choice.title);
+            return choiceArr;
+          },
+        },
+      ])
+      .then((answer) => {
+        connection.query(
+          `UPDATE employee 
+        SET role_id = (SELECT id FROM empRole WHERE title = ?)
+        WHERE id = (SELECT id FROM(SELECT id FROM employee WHERE CONCAT(first_name, " ", last_name) = ?) AS tmptable)`,
+          [answer.roleNew, answer.employ],
+          (err, results) => {
+            if (err) throw err;
+            promptMenu();
+          }
+        );
+      });
+  });
+}
