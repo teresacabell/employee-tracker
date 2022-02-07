@@ -2,7 +2,8 @@ const inquirer = require("inquirer");
 const mysql = require("mysql2");
 const conTable = require("console.table");
 
-const addEmpQ = ['What is the new first name?', 'What is the new last name?', 'What role?', 'Who is their manager?']
+const addEmpQ = ['What is the new first name?', 'What is the new last name?', 'What role?', 'Who is their manager?'];
+const roleQuery = 'SELECT * from empRole; SELECT CONCAT(employee.first_name, " ", employee.last_name) AS full_name FROM employee';
 
 // create connection
 const connection = mysql.createConnection({
@@ -118,7 +119,10 @@ function viewAllEmp() {
 
 // Add employee
 function addEmp() {
-  inquirer
+  connection.query(roleQuery, (err, results) => {
+    if (err) throw err; 
+
+    inquirer
     .prompt([
       {
         type: 'input',
@@ -133,10 +137,29 @@ function addEmp() {
       {
           type: 'list',
           name: 'role',
+          choices: function() {
+              let choiceArr = results[0].map(choice => choice.title);
+              return choiceArr;
+          },
           message: addEmpQ[2]
+      },
+      {
+          type: 'list',
+          name: 'manager',
+          choices: function() {
+              let choiceArr = results[1].map(choice => choice.full_name);
+              return choiceArr;
+          },
+          message: AddEmpQ[3]
       }
-    ])
-   
+    ]).then((answer) => {
+        connection.query(
+            `INSERT INTO employee(first_name, last_name, role_id, manager_id) VALUES(?, ?, (SELECT id FROM empRole WHERE title = ?), 
+            (SELECT id FROM (SELECT id FROM employee WHERE CONCAT(first_name, " ", last_name)= ?) AS tmptable))`, [answer.employeeFirst, answer.employeeLast, answer.role, answer.manager]
+        ) 
+        promptMenu();
+    })
+})
 }
 
 // Add another role
